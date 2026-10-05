@@ -43,3 +43,9 @@ app.get('/recipes/:id', async (req, res, next) => {
         next(error);
     }
 });
+
+app.use((req, res) => {
+    res.status(404).json({ message: 'Not Found' }); 
+});
+
+
