@@ -8,7 +8,7 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
     uri: process.env.DATABASE_URL,
     charset: 'utf8mb4',
-    dataString: true,
+    dateStrings: true,
 }
 
 const pool = mysql.createPool(dbConfig);
