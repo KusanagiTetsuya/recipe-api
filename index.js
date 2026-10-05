@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 
-// データベース接続の設定
+//データベース接続の設定
 const dbConfig = {
     uri: process.env.DATABASE_URL,
     charset: 'utf8mb4',
@@ -12,6 +12,7 @@ const dbConfig = {
 }
 
 const pool = mysql.createPool(dbConfig);
+const FIELDS = ['title', 'making_time', 'serves', 'ingredients', 'cost'];
 const toRecipe = (recipe) => ({
     id: recipe.id,
     title: recipe.title,
@@ -21,12 +22,34 @@ const toRecipe = (recipe) => ({
     cost: String(recipe.cost),
 });
 
+async function initDatabase() {
+  const [tables] = await pool.query("SHOW TABLES LIKE 'recipes'");
+  if (tables.length > 0) return;
+
+  const sql = fs.readFileSync(path.join(__dirname, 'sql', 'create.sql'), 'utf8');
+  const conn = await mysql.createConnection({ ...dbConfig, multipleStatements: true });
+  await conn.query(sql);
+  await conn.end();
+}
+
 //recipeからIDを検索
 async function findByID(id) {
     if (!/^\d+$/.test(String(id))) return undefined;
     const [rows] = await pool.query('SELECT * FROM recipes WHERE id = ?', [Number(id)]);
     return rows[0];
 }
+
+app.use(express.json());
+
+//GET /recipes -> 全てのレシピを取得
+app.get('/recipes', async (req, res, next) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM recipes ORDER BY id');
+    res.status(200).json({ recipes: rows.map(toRecipe) });
+  } catch (err) {
+    next(err);
+  }
+});
 
 //GET /recipes/:id
 app.get('/recipes/:id', async (req, res, next) => {
@@ -44,10 +67,18 @@ app.get('/recipes/:id', async (req, res, next) => {
     }
 });
 
+//404 Not Found ハンドリング
 app.use((req, res) => {
     res.status(404).json({ message: 'Not Found' }); 
 });
 
+//500 Internal Server Error ハンドリング
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ message: 'Internal Server Error' });
+});
+
+//データベース初期化とサーバー起動
 const PORT = process.env.PORT || 3000;
 initDatabase()
     .then(() => app.listen(PORT, () => {
@@ -57,4 +88,3 @@ initDatabase()
         console.error('Failed to initialize the database:', error);
         process.exit(1);
     });
-
