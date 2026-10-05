@@ -48,4 +48,13 @@ app.use((req, res) => {
     res.status(404).json({ message: 'Not Found' }); 
 });
 
+const PORT = process.env.PORT || 3000;
+initDatabase()
+    .then(() => app.listen(PORT, () => {
+        console.log(`Listening on port ${PORT}`);
+    }))
+    .catch((error) => {
+        console.error('Failed to initialize the database:', error);
+        process.exit(1);
+    });
 
