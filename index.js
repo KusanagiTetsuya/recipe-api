@@ -78,6 +78,19 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal Server Error' });
 });
 
+//DELETE /recipes/:id -> レシピを削除
+app.delete('/recipes/:id', async (req, res, next) => {
+    try {
+        const recipe = await findByID(req.params.id);
+        if(!recipe) {
+            return res.status(200).json({ message: 'No Recipe found' });
+        }
+        await pool.query('DELETE FROM recipes WHERE id = ?', [recipe.id]);
+        res.status(200).json({ message: 'Recipe successfully deleted!' });
+    } catch (error) {
+        next(error);
+    }
+});
 //データベース初期化とサーバー起動
 const PORT = process.env.PORT || 3000;
 initDatabase()
